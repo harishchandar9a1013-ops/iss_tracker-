@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ISS Tracker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: #000010;
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            background-image:
+                radial-gradient(ellipse at top, #0d1b4b 0%, #000010 60%),
+                url('https://www.transparenttextures.com/patterns/stardust.png');
+        }
+
+        header {
+            padding: 30px 20px 10px;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.2rem;
+            color: #00cfff;
+            text-shadow: 0 0 20px #00cfff88;
+            letter-spacing: 4px;
+        }
+
+        .subtitle {
+            color: #8899bb;
+            font-size: 1rem;
+            margin-top: 6px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .coords {
+            display: inline-block;
+            margin: 20px auto;
+            padding: 12px 30px;
+            background: rgba(0, 207, 255, 0.07);
+            border: 1px solid #00cfff44;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+            color: #00cfff;
+        }
+
+        .coords span {
+            color: white;
+        }
+
+        #map {
+            height: 480px;
+            width: 88%;
+            margin: 10px auto 30px;
+            border-radius: 16px;
+            border: 1px solid #00cfff33;
+            box-shadow: 0 0 40px #00cfff22;
+        }
+
+        .crew-section {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid #ffffff11;
+            border-radius: 16px;
+            width: 88%;
+            margin: 0 auto 40px;
+            padding: 24px;
+        }
+
+        .crew-section h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            color: #00cfff;
+            letter-spacing: 3px;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+        }
+
+        .crew-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .crew-card {
+            background: rgba(0, 207, 255, 0.05);
+            border: 1px solid #00cfff22;
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-size: 0.95rem;
+            color: #cce8ff;
+        }
+
+        .crew-card span {
+            color: #8899bb;
+            font-size: 0.8rem;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .live-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #00ff88;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🛸 ISS LIVE TRACKER</h1>
+    <div class="subtitle">International Space Station — Real Time Position</div>
+    <div style="margin-top: 12px;">
+        <span style="color: #8899bb; font-size: 0.9rem;">Welcome, {{ request.user.username }}</span>
+        &nbsp;|&nbsp;
+        <form method="post" action="/logout/" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" style="background:none; border:none; color:#ff6b6b; font-size:0.9rem; cursor:pointer; letter-spacing:1px; font-family:'Rajdhani',sans-serif;">LOGOUT</button>
+        </form>
+    </div>
+</header>
+
+<div class="coords">
+    <span class="live-dot"></span>
+    📍 Lat: <span id="lat">{{ lat }}</span> &nbsp;|&nbsp; Lon: <span id="lon">{{ lon }}</span>
+</div>
+
+<div id="map"></div>
+
+<div class="crew-section">
+    <h3>👨‍🚀 People in Space — {{ count }}</h3>
+    <div class="crew-grid">
+        {% for person in people %}
+        <div class="crew-card">
+            {{ person.name }}
+            <span>{{ person.craft }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    var lat = {{ lat }};
+    var lon = {{ lon }};
+
+    var map = L.map('map').setView([lat, lon], 3);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '© OpenStreetMap © CARTO'
+    }).addTo(map);
+
+    var issIcon = L.divIcon({
+        html: '🛸',
+        className: '',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+    });
+
+    var marker = L.marker([lat, lon], {icon: issIcon}).addTo(map)
+        .bindPopup("ISS is here!").openPopup();
+
+    setInterval(function() {
+        fetch('/iss-position/')
+            .then(r => r.json())
+            .then(data => {
+                marker.setLatLng([data.lat, data.lon]);
+                map.setView([data.lat, data.lon]);
+                document.getElementById('lat').innerText = data.lat;
+                document.getElementById('lon').innerText = data.lon;
+            });
+    }, 5000);
+</script>
+</body>
+</html>
